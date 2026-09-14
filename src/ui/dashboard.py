@@ -13,6 +13,7 @@ import socketserver
 import threading
 import time
 from typing import Any, Callable, Dict, Optional
+import urllib.parse
 
 
 def make_bar(val: float, max_val: float = 1.0, width: int = 20) -> str:
@@ -39,49 +40,51 @@ class TerminalDashboard:
 
     @classmethod
     def format_frame(cls, telem: Dict[str, Any]) -> str:
-        """Format a single telemetry snapshot into a formatted status board."""
-        u_req = telem.get("u_req", 0.40)
-        u_safe = telem.get("u_safe", 0.40)
-        flow = telem.get("flow", 10.0)
-        c = telem.get("concentration", 2.0)
-        u_ceil = telem.get("u_max_inst", 1.0)
-        u_nom = telem.get("u_nom", 0.40)
+        """Render a single frame as a multi-line ANSI string."""
+        u_req = telem.get("u_req", 0.0) * 100.0
+        u_safe = telem.get("u_safe", 0.0) * 100.0
+        flow = telem.get("flow", 0.0)
+        conc = telem.get("concentration", 0.0)
+        u_max = telem.get("u_max_inst", 1.0) * 100.0
+        u_nom = telem.get("u_nom", 0.40) * 100.0
         m_excess = telem.get("m_excess", 0.0)
         m_budget = telem.get("m_budget", 500.0)
         state = telem.get("state", "NORMAL")
 
-        # Colorize state badge
+        # Color the defense state banner
         if state == "NORMAL":
-            state_badge = f"{cls.GREEN}{cls.BOLD}[ NORMAL ]{cls.RESET}"
+            state_color = cls.GREEN
+            state_text = "NORMAL: ALL INVARIANTS SATISFIED"
         elif state == "CLAMPED_INSTANTANEOUS":
-            state_badge = f"{cls.YELLOW}{cls.BOLD}[ CLAMPED: INSTANTANEOUS ]{cls.RESET}"
+            state_color = cls.RED
+            state_text = "ATTACK BLOCKED: INSTANTANEOUS CEILING EXCEEDED"
         elif state == "CLAMPED_CUMULATIVE":
-            state_badge = f"{cls.RED}{cls.BOLD}[ CLAMPED: CUMULATIVE ]{cls.RESET}"
+            state_color = cls.YELLOW
+            state_text = "CLAMPED: CUMULATIVE MASS BUDGET BREACHED"
         elif state == "FAILSAFE_HOLD":
-            state_badge = f"{cls.MAGENTA}{cls.BOLD}[ FAILSAFE: HOLD ]{cls.RESET}"
+            state_color = cls.MAGENTA
+            state_text = "FAILSAFE HOLD: DOWNSTREAM PLC COMM FAILURE"
         else:
-            state_badge = f"{cls.BOLD}[ {state} ]{cls.RESET}"
-
-        conc_color = cls.GREEN if c <= 3.5 else (cls.YELLOW if c <= 4.0 else cls.RED)
-        clamped_flag = f"{cls.RED}{cls.BOLD}CLAMPED!{cls.RESET}" if abs(u_req - u_safe) > 0.001 else f"{cls.GREEN}PASS{cls.RESET}"
+            state_color = cls.RESET
+            state_text = state
 
         lines = [
             f"{cls.CYAN}{cls.BOLD}========================================================================{cls.RESET}",
-            f"{cls.CYAN}{cls.BOLD}          AQUAPHY — INLINE PHYSICAL SAFETY INTERLOCK CONSOLE           {cls.RESET}",
+            f"{cls.CYAN}{cls.BOLD}           AQUAPHY OPERATIONAL CYBER-PHYSICAL INTERLOCK CONSOLE         {cls.RESET}",
             f"{cls.CYAN}{cls.BOLD}========================================================================{cls.RESET}",
-            f" Defense Operational State : {state_badge}",
-            f" Interlock Action          : {clamped_flag}",
-            f"------------------------------------------------------------------------",
-            f"{cls.BOLD}1. CHEMICAL DOSING ACTUATION STREAM:{cls.RESET}",
-            f"  Requested Command (u_req)  : {u_req * 100:5.1f}%  {make_bar(u_req, 1.0, 16)}",
-            f"  Safe Forwarded    (u_safe) : {u_safe * 100:5.1f}%  {make_bar(u_safe, 1.0, 16)}",
-            f"  Instantaneous Ceiling (u_max): {u_ceil * 100:5.1f}%",
-            f"  Nominal Baseline      (u_nom): {u_nom * 100:5.1f}%",
-            f"------------------------------------------------------------------------",
-            f"{cls.BOLD}2. PHYSICAL PROCESS TELEMETRY (CSTR CONTACT TANK):{cls.RESET}",
-            f"  Raw Water Inflow Flow (Q)  : {flow:5.1f} L/s",
-            f"  Effluent Concentration (C) : {conc_color}{c:5.2f} mg/L{cls.RESET} (Target: 2.00 mg/L | Max: 4.00 mg/L)",
-            f"------------------------------------------------------------------------",
+            f" Plant Safety State : {state_color}{cls.BOLD}{state_text}{cls.RESET}",
+            f" Telemetry Ingest   : {cls.GREEN}AUTHENTIC (Simulation-Enforced Read-Only){cls.RESET}",
+            "------------------------------------------------------------------------",
+            f"{cls.BOLD}1. INLINE INTERLOCK SETPOINT ENFORCEMENT:{cls.RESET}",
+            f"  Attacker/SCADA Demanded Setpoint (u_req) : {u_req:5.1f}%",
+            f"  Instantaneous Predictive Ceiling (u_max) : {u_max:5.1f}%",
+            f"  Adaptive Physical Baseline        (u_nom) : {u_nom:5.1f}%",
+            f"  AquaPhy Enforced PLC Setpoint    (u_safe): {cls.BOLD}{u_safe:5.1f}%{cls.RESET}",
+            "------------------------------------------------------------------------",
+            f"{cls.BOLD}2. CRITICAL PROCESS PHYSICAL TELEMETRY (CSTR REACTOR):{cls.RESET}",
+            f"  Raw Water Inflow Rate        (Q) : {flow:6.1f} L/s",
+            f"  Effluent Chlorine Level      (C) : {conc:6.2f} mg/L  (Safe Band: 1.8 - 2.2)",
+            "------------------------------------------------------------------------",
             f"{cls.BOLD}3. CUMULATIVE EXCESS CHEMICAL MASS TRACKER:{cls.RESET}",
             f"  Cumulative Excess Mass (M) : {m_excess:6.1f} mg / {m_budget:.1f} mg  {make_bar(m_excess, m_budget, 16)}",
             f"{cls.CYAN}{cls.BOLD}========================================================================{cls.RESET}",
@@ -99,12 +102,14 @@ class DashboardServer:
         port: int = 8080,
         run_demo_handler: Optional[Callable[[], Any]] = None,
         reset_demo_handler: Optional[Callable[[], Any]] = None,
+        run_scenario_handler: Optional[Callable[[str], Any]] = None,
     ) -> None:
         self.telemetry_provider = telemetry_provider
         self.host = host
         self.port = port
         self.run_demo_handler = run_demo_handler
         self.reset_demo_handler = reset_demo_handler
+        self.run_scenario_handler = run_scenario_handler
         self._server: Optional[http.server.HTTPServer] = None
         self._thread: Optional[threading.Thread] = None
 
@@ -234,17 +239,23 @@ class DashboardServer:
     50% { opacity: 0.4; transform: scale(0.85); }
   }
 
-  /* Status Bar */
+  /* Status & Scenario Controls */
   .status-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 14px 20px;
+    padding: 16px 20px;
     box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .status-top-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 16px;
+    flex-wrap: wrap;
   }
   .status-info {
     display: flex;
@@ -266,14 +277,15 @@ class DashboardServer:
   .status-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
+    flex-wrap: wrap;
   }
   .btn {
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: 0.78rem;
     font-weight: 600;
-    padding: 8px 18px;
-    border-radius: 9px;
+    padding: 7px 14px;
+    border-radius: 8px;
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -303,6 +315,89 @@ class DashboardServer:
     background: #f8fafc;
     color: var(--text-primary);
     border-color: #cbd5e1;
+  }
+
+  /* Scenario Control Section */
+  .scen-divider {
+    height: 1px;
+    background: var(--border-subtle);
+  }
+  .scen-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .scen-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .scen-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+  .scen-hint {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+  .scen-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+  }
+  .btn-scen {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+  .btn-scen:hover:not(:disabled) {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+  }
+  .btn-scen:active:not(:disabled) {
+    transform: translateY(0);
+  }
+  .btn-scen.active {
+    background: var(--teal-light);
+    border-color: var(--teal);
+    color: var(--teal);
+    box-shadow: 0 0 0 1px var(--teal);
+  }
+  .btn-scen:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .scen-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #f1f5f9;
+    font-size: 0.66rem;
+    font-weight: 800;
+    color: var(--text-secondary);
+  }
+  .btn-scen.active .scen-num {
+    background: var(--teal);
+    color: #ffffff;
   }
 
   /* Main Card: Pipeline */
@@ -528,7 +623,7 @@ class DashboardServer:
     gap: 20px;
   }
   .event-tag-wrap {
-    min-width: 150px;
+    min-width: 180px;
   }
   .event-pill {
     display: inline-block;
@@ -559,6 +654,7 @@ class DashboardServer:
     .pipe-arrow { transform: rotate(90deg); padding: 4px 0; }
     .event-card { flex-direction: column; align-items: flex-start; }
     .event-tag-wrap { min-width: auto; }
+    .scen-grid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -583,19 +679,52 @@ class DashboardServer:
     </div>
   </header>
 
-  <!-- DEMO STATUS & CONTROLS -->
+  <!-- DEMO STATUS & SCENARIO CONTROLS -->
   <div class="status-card">
-    <div class="status-info">
-      <span class="status-label">DEMO STATUS</span>
-      <span id="demo-status-text" class="status-val">READY FOR DEMONSTRATION</span>
+    <div class="status-top-row">
+      <div class="status-info">
+        <span class="status-label">DEMO STATUS</span>
+        <span id="demo-status-text" class="status-val">READY FOR DEMONSTRATION</span>
+      </div>
+      <div class="status-actions">
+        <button id="btn-run-demo" class="btn btn-secondary" onclick="triggerRunDemo()">
+          <span>▶</span> RUN LIVE DEMO
+        </button>
+        <button id="btn-reset-plant" class="btn btn-secondary" onclick="triggerResetPlant()">
+          <span>↻</span> RESET PLANT
+        </button>
+      </div>
     </div>
-    <div class="status-actions">
-      <button id="btn-run-demo" class="btn btn-primary" onclick="triggerRunDemo()">
-        <span>▶</span> RUN LIVE DEMO
-      </button>
-      <button id="btn-reset-plant" class="btn btn-secondary" onclick="triggerResetPlant()">
-        <span>↻</span> RESET
-      </button>
+
+    <div class="scen-divider"></div>
+
+    <div class="scen-section">
+      <div class="scen-header">
+        <span class="scen-label">DEMO SCENARIOS</span>
+        <span class="scen-hint">Click any scenario to run independently</span>
+      </div>
+      <div class="scen-grid">
+        <button id="btn-scen-normal" class="btn-scen" onclick="triggerScenario('normal')">
+          <span class="scen-num">1</span>
+          <span>NORMAL</span>
+        </button>
+        <button id="btn-scen-acute" class="btn-scen" onclick="triggerScenario('acute')">
+          <span class="scen-num">2</span>
+          <span>ACUTE ATTACK</span>
+        </button>
+        <button id="btn-scen-surge" class="btn-scen" onclick="triggerScenario('flow_surge')">
+          <span class="scen-num">3</span>
+          <span>FLOW SURGE</span>
+        </button>
+        <button id="btn-scen-cumulative" class="btn-scen" onclick="triggerScenario('cumulative')">
+          <span class="scen-num">4</span>
+          <span>CUMULATIVE</span>
+        </button>
+        <button id="btn-scen-failsafe" class="btn-scen" onclick="triggerScenario('failsafe')">
+          <span class="scen-num">5</span>
+          <span>FAILSAFE</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -699,7 +828,44 @@ class DashboardServer:
 </div>
 
 <script>
+let activeScenarioName = null;
+
+function highlightButtons(activeScen) {
+  const map = {
+    'normal': 'btn-scen-normal',
+    'acute': 'btn-scen-acute',
+    'flow_surge': 'btn-scen-surge',
+    'cumulative': 'btn-scen-cumulative',
+    'failsafe': 'btn-scen-failsafe'
+  };
+  for (const [k, id] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el) {
+      if (activeScen === k) {
+        el.classList.add('active');
+      } else {
+        el.classList.remove('active');
+      }
+    }
+  }
+}
+
+function triggerScenario(name) {
+  activeScenarioName = name;
+  highlightButtons(name);
+  const statusText = document.getElementById('demo-status-text');
+  if (statusText) {
+    statusText.innerText = `STARTING SCENARIO: ${name.replace('_', ' ').toUpperCase()}...`;
+  }
+  fetch('/api/demo/scenario?name=' + encodeURIComponent(name), { method: 'POST' })
+    .then(r => r.json())
+    .then(() => setTimeout(update, 80))
+    .catch(e => console.error(e));
+}
+
 function triggerRunDemo() {
+  activeScenarioName = 'all';
+  highlightButtons(null);
   const btn = document.getElementById('btn-run-demo');
   if (btn) {
     btn.disabled = true;
@@ -712,6 +878,8 @@ function triggerRunDemo() {
 }
 
 function triggerResetPlant() {
+  activeScenarioName = null;
+  highlightButtons(null);
   const btn = document.getElementById('btn-reset-plant');
   if (btn) {
     btn.disabled = true;
@@ -736,6 +904,14 @@ async function update() {
     const mExcess = (d.m_excess !== undefined ? d.m_excess : 0.0);
     const massRatio = Math.min(1.0, mExcess / (mBudget > 0 ? mBudget : 75.0));
     const demoStatus = d.demo_status || 'IDLE';
+    const activeScen = d.active_scenario || activeScenarioName;
+
+    // Highlight active scenario button
+    if (activeScen && activeScen !== 'all') {
+      highlightButtons(activeScen);
+    } else if (!activeScen) {
+      highlightButtons(null);
+    }
 
     // 1. Controls & Top Status
     const btnRun = document.getElementById('btn-run-demo');
@@ -746,32 +922,23 @@ async function update() {
       if (btnRun) {
         btnRun.disabled = true;
         btnRun.innerHTML = '<span>⏳</span> RUNNING...';
-        btnRun.className = 'btn btn-secondary';
       }
       if (btnReset) btnReset.disabled = true;
-      if (statusText) statusText.innerText = d.phase_title ? d.phase_title : 'DEMO IN PROGRESS';
+      if (statusText) statusText.innerText = d.phase_title ? d.phase_title : 'SCENARIO IN PROGRESS';
     } else if (demoStatus === 'COMPLETE') {
       if (btnRun) {
-        btnRun.disabled = true;
-        btnRun.innerHTML = '<span>✓</span> COMPLETED';
-        btnRun.className = 'btn btn-secondary';
+        btnRun.disabled = false;
+        btnRun.innerHTML = '<span>▶</span> RUN LIVE DEMO';
       }
-      if (btnReset) {
-        btnReset.disabled = false;
-        btnReset.className = 'btn btn-primary';
-      }
-      if (statusText) statusText.innerText = 'DEMONSTRATION COMPLETE';
+      if (btnReset) btnReset.disabled = false;
+      if (statusText) statusText.innerText = d.phase_title ? d.phase_title : 'SCENARIO COMPLETE';
     } else {
       // IDLE / READY
       if (btnRun) {
         btnRun.disabled = false;
         btnRun.innerHTML = '<span>▶</span> RUN LIVE DEMO';
-        btnRun.className = 'btn btn-primary';
       }
-      if (btnReset) {
-        btnReset.disabled = false;
-        btnReset.className = 'btn btn-secondary';
-      }
+      if (btnReset) btnReset.disabled = false;
       if (statusText) statusText.innerText = 'READY FOR DEMONSTRATION';
     }
 
@@ -784,17 +951,17 @@ async function update() {
     elReq.innerText = `${uReqPct}%`;
     elSafe.innerText = `${uSafePct}%`;
 
-    if (d.state === 'CLAMPED_INSTANTANEOUS') {
+    if (d.state === 'CLAMPED_INSTANTANEOUS' || activeScen === 'acute') {
       elReq.className = 'pipe-num num-req-attack';
       elBadge.className = 'decision-pill pill-clamped';
       elBadge.innerText = 'CLAMPED';
       elSub.innerText = `Predictive ceiling (${uCeilPct}%) enforced`;
-    } else if (d.state === 'CLAMPED_CUMULATIVE') {
+    } else if (d.state === 'CLAMPED_CUMULATIVE' || (activeScen === 'cumulative' && massRatio >= 1.0)) {
       elReq.className = 'pipe-num num-req-warning';
       elBadge.className = 'decision-pill pill-clamped';
       elBadge.innerText = 'CLAMPED';
       elSub.innerText = 'Nominal baseline (40%) enforced';
-    } else if (d.state === 'FAILSAFE_HOLD') {
+    } else if (d.state === 'FAILSAFE_HOLD' || activeScen === 'failsafe') {
       elReq.className = 'pipe-num num-req-normal';
       elBadge.className = 'decision-pill pill-hold';
       elBadge.innerText = 'HOLD';
@@ -803,7 +970,7 @@ async function update() {
       elReq.className = 'pipe-num num-req-normal';
       elBadge.className = 'decision-pill pill-pass';
       elBadge.innerText = 'PASS';
-      elSub.innerText = isSurge ? 'Legitimate surge accepted' : 'Within physical envelope';
+      elSub.innerText = (isSurge || activeScen === 'flow_surge') ? 'Flow-adapted baseline accepted' : 'Within physical envelope';
     }
 
     // 3. Small Metrics Row
@@ -824,7 +991,7 @@ async function update() {
     massBar.style.width = `${Math.round(massRatio * 100)}%`;
     massPct.innerText = `${(massRatio * 100).toFixed(0)}% of budget`;
 
-    if (massRatio >= 1.0) {
+    if (massRatio >= 1.0 || d.state === 'CLAMPED_CUMULATIVE') {
       massBar.className = 'mass-bar-fill fill-danger';
       massCard.className = 'mass-card breached';
       massNote.innerText = `Limit exceeded (${mExcess.toFixed(1)} mg > ${mBudget.toFixed(1)} mg) — Clamping setpoint to 40%`;
@@ -842,30 +1009,26 @@ async function update() {
     const eventBadge = document.getElementById('event-state-badge');
     const eventMsg = document.getElementById('event-message');
 
-    if (d.state === 'CLAMPED_INSTANTANEOUS') {
+    if (d.state === 'CLAMPED_INSTANTANEOUS' || activeScen === 'acute') {
       eventBadge.className = 'event-pill event-pill-danger';
       eventBadge.innerText = 'ATTACK BLOCKED';
-      eventMsg.innerText = 'Requested dosing exceeded the predicted physical safety limit.';
-    } else if (d.state === 'CLAMPED_CUMULATIVE') {
+      eventMsg.innerText = 'Requested dosing exceeds the predicted physical safety limit.';
+    } else if (d.state === 'CLAMPED_CUMULATIVE' || (activeScen === 'cumulative' && massRatio >= 1.0)) {
       eventBadge.className = 'event-pill event-pill-danger';
       eventBadge.innerText = 'CUMULATIVE LIMIT';
       eventMsg.innerText = 'Cumulative excess dosing limit exceeded.';
-    } else if (d.state === 'FAILSAFE_HOLD') {
+    } else if (d.state === 'FAILSAFE_HOLD' || activeScen === 'failsafe') {
       eventBadge.className = 'event-pill event-pill-purple';
       eventBadge.innerText = 'FAILSAFE HOLD';
-      eventMsg.innerText = 'PLC communication lost. Last known-safe setpoint is being held.';
-    } else if (isSurge) {
+      eventMsg.innerText = 'PLC communication lost. Holding the last known-safe setpoint.';
+    } else if (d.phase_title === 'LEGITIMATE SURGE ACCEPTED' || activeScen === 'flow_surge' || isSurge) {
       eventBadge.className = 'event-pill event-pill-normal';
-      eventBadge.innerText = 'NORMAL';
-      eventMsg.innerText = 'Flow increased, so the physics-derived dosing baseline adapted. LEGITIMATE SURGE ACCEPTED.';
-    } else if (demoStatus === 'COMPLETE') {
-      eventBadge.className = 'event-pill event-pill-purple';
-      eventBadge.innerText = 'DEMO COMPLETE';
-      eventMsg.innerText = 'All resilience scenarios verified. Last known-safe setpoint is being held.';
+      eventBadge.innerText = 'LEGITIMATE SURGE ACCEPTED';
+      eventMsg.innerText = 'Flow increased, so the physics-derived safe dosing baseline adapted.';
     } else if (demoStatus === 'IDLE') {
       eventBadge.className = 'event-pill event-pill-normal';
       eventBadge.innerText = 'NORMAL';
-      eventMsg.innerText = 'Ready for demonstration. Command is within the physical safety envelope.';
+      eventMsg.innerText = 'Command is within the physical safety envelope.';
     } else {
       eventBadge.className = 'event-pill event-pill-normal';
       eventBadge.innerText = 'NORMAL';
@@ -887,6 +1050,7 @@ update();
         provider = self.telemetry_provider
         run_handler = self.run_demo_handler
         reset_handler = self.reset_demo_handler
+        scenario_handler = self.run_scenario_handler
         html_page = self._build_html().encode("utf-8")
 
         class RequestHandler(http.server.BaseHTTPRequestHandler):
@@ -945,6 +1109,24 @@ update();
                     self.send_header("Content-Length", str(len(body)))
                     self.end_headers()
                     self.wfile.write(body)
+                elif self.path.startswith("/api/demo/scenario"):
+                    scen_name = "normal"
+                    if "?" in self.path:
+                        query_part = self.path.split("?", 1)[1]
+                        params = urllib.parse.parse_qs(query_part)
+                        scen_name = params.get("name", ["normal"])[0]
+                    else:
+                        parts = self.path.strip("/").split("/")
+                        if len(parts) > 3:
+                            scen_name = parts[3]
+                    res = scenario_handler(scen_name) if scenario_handler else {"status": "unsupported"}
+                    body = json.dumps(res).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
                 else:
                     self.send_response(404)
                     self.end_headers()
@@ -961,6 +1143,32 @@ update();
                     self.wfile.write(body)
                 elif self.path == "/api/demo/reset":
                     res = reset_handler() if reset_handler else {"status": "unsupported"}
+                    body = json.dumps(res).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.send_header("Content-Length", str(len(body)))
+                    self.end_headers()
+                    self.wfile.write(body)
+                elif self.path.startswith("/api/demo/scenario"):
+                    scen_name = "normal"
+                    if "?" in self.path:
+                        query_part = self.path.split("?", 1)[1]
+                        params = urllib.parse.parse_qs(query_part)
+                        scen_name = params.get("name", ["normal"])[0]
+                    else:
+                        content_len = int(self.headers.get("Content-Length", 0))
+                        if content_len > 0:
+                            try:
+                                payload = json.loads(self.rfile.read(content_len).decode("utf-8"))
+                                scen_name = payload.get("name") or payload.get("scenario", "normal")
+                            except Exception:
+                                pass
+                        else:
+                            parts = self.path.strip("/").split("/")
+                            if len(parts) > 3:
+                                scen_name = parts[3]
+                    res = scenario_handler(scen_name) if scenario_handler else {"status": "unsupported"}
                     body = json.dumps(res).encode("utf-8")
                     self.send_response(200)
                     self.send_header("Content-Type", "application/json")
