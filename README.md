@@ -1,6 +1,63 @@
-# AquaPhy — CyberCity Hackathon
+AquaPhy
 
-**IACyC 2026 · CyberMACS Student Hackathon**  
+Cyber-Physical Water Safety — Hackathon Prototype
+
+AquaPhy prevents unsafe chemical-dosing commands from reaching a water-treatment PLC by validating them against a physical safety envelope.
+
+Track: A — Resilience Under Attack
+
+Architecture
+SCADA / Attacker
+       ↓
+AquaPhy Inline Interlock
+       ↓
+Synthetic PLC / Actuator
+
+AquaPhy uses:
+
+Instantaneous physics safety limits
+Physics-derived dosing baseline
+Cumulative excess-mass limits
+Deterministic command clamping
+Failsafe hold on PLC communication loss
+Demo
+Normal        40% → 40%
+Acute attack  100% → 80%
+Flow surge    56% accepted
+Slow creep    55% → 40%
+Failsafe      PLC loss → FAILSAFE_HOLD
+Run
+git clone https://github.com/Amaanrais/CyberCity-Hackathon.git
+cd CyberCity-Hackathon
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+Run tests:
+
+.venv/bin/pytest -q
+
+Run the interactive demo:
+
+.venv/bin/python3 demo/run_demo.py
+
+Open:
+
+http://127.0.0.1:8080
+
+Then click RUN LIVE DEMO.
+
+Project Structure
+src/simulation/        CSTR process model
+src/plc/               Synthetic PLC
+src/interlock/         Physics engine + inline proxy
+src/ui/                Dashboard
+demo/                  Attack scripts + demo runner
+tests/                 Automated tests
+docs/                   Architecture + decisions
+
+Hackathon prototype only — all process data and PLCs are synthetic.**IACyC 2026 · CyberMACS Student Hackathon**  
 **Track:** Track A — Resilience Under Attack
 
 ---
