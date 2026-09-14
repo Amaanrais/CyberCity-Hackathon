@@ -65,3 +65,53 @@ def test_web_dashboard_server():
             assert data["concentration"] == 2.0
     finally:
         server.stop()
+
+
+def test_web_dashboard_scenario_endpoints():
+    """Verify HTTP server handles scenario trigger endpoints."""
+    received = []
+
+    def mock_scenario_handler(scen: str):
+        received.append(scen)
+        return {"status": "ok", "scenario": scen}
+
+    server = DashboardServer(
+        telemetry_provider=lambda: {"state": "NORMAL"},
+        port=58085,
+        run_scenario_handler=mock_scenario_handler,
+    )
+    server.start()
+    time.sleep(0.1)
+
+    try:
+        # 1. Test POST /api/demo/scenario?name=acute
+        req = urllib.request.Request("http://127.0.0.1:58085/api/demo/scenario?name=acute", data=b"", method="POST")
+        with urllib.request.urlopen(req) as resp:
+            assert resp.status == 200
+            res = json.loads(resp.read().decode("utf-8"))
+            assert res["status"] == "ok"
+            assert res["scenario"] == "acute"
+
+        # 2. Test GET /api/demo/scenario?name=flow_surge
+        with urllib.request.urlopen("http://127.0.0.1:58085/api/demo/scenario?name=flow_surge") as resp:
+            assert resp.status == 200
+            res = json.loads(resp.read().decode("utf-8"))
+            assert res["scenario"] == "flow_surge"
+
+        # 3. Test POST with JSON body
+        body = json.dumps({"scenario": "cumulative"}).encode("utf-8")
+        req2 = urllib.request.Request(
+            "http://127.0.0.1:58085/api/demo/scenario",
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req2) as resp:
+            assert resp.status == 200
+            res = json.loads(resp.read().decode("utf-8"))
+            assert res["scenario"] == "cumulative"
+
+        assert received == ["acute", "flow_surge", "cumulative"]
+    finally:
+        server.stop()
+
