@@ -32,4 +32,4 @@ We built **AquaLock SIS**, an independent Safety Instrumented System (SIS) inter
 
 We designed the system ourselves: the SIS architecture, the three safety gates and thresholds, the fail-safe decay policy, and the CyberCity/Oldsmar threat framing. We used **Claude Code (Anthropic)** as a coding assistant to speed up boilerplate (FastAPI routes, test scaffolding, chart wiring) and help draft documentation, which we then reviewed and revised ourselves. Every safety-critical decision was specified, checked, and owned by the team.
 
-**Repo:** https://github.com/devded/i1 · **Docs:** `README.md`, `SYSTEM_DESIGN_AND_PITCH.md`, `docs/SYSTEM_EXPLAINED.md`
+**Repo:** https://github.com/Amaanrais/CyberCity-Hackathon (Mirror: https://github.com/devded/i1) · **Docs:** `README.md`, `docs/SYSTEM_EXPLAINED.md`

@@ -106,16 +106,16 @@ This system demonstrates the attack succeeding when the safety interlock is **OF
 
 ---
 
-## 4. Key Design Decisions & Judge Q&A Guide
+## 4. Core Engineering Design Decisions & Safety Principles
 
-### Q1: "What stops the attacker from just calling `/interlock` and disabling the safety system?"
-> **Answer:** In actual industrial critical infrastructure adhering to **IEC 61511 / ISA-84**, Safety Instrumented Systems (SIS) are **physically air-gapped and hardwired** from the basic process control system (BPCS/SCADA). The safety logic runs on separate SIL-3 rated hardware (such as a Triconex or HIMA logic solver) housed in a locked physical control cabinet. The ON/OFF toggle in this dashboard is explicitly documented and styled as a **demo stand-in for a physical, key-operated selector switch on that cabinet**, not a reachable network endpoint.
+### 4.1 Physical Hardware Air-Gapping (IEC 61511 / ISA-84)
+In operational critical infrastructure, Safety Instrumented Systems (SIS) are **physically isolated and hardwired** from the basic process control network (BPCS/SCADA). The safety logic runs on independent SIL-3 rated hardware (such as a Triconex or HIMA logic solver) housed in a locked physical control cabinet. The ON/OFF toggle in this console is an architectural stand-in for a **physical, key-operated selector switch** on that cabinet, ensuring the interlock cannot be remotely disabled over the network.
 
-### Q2: "Why not simply hold the last accepted dose indefinitely on a block?"
-> **Answer (Fail-Safe Decay Rationale):** Holding the last accepted safe command is appropriate for transient anomalies or short-lived sensor dropouts. However, if the plant was already operating at an elevated dosing state (e.g. 140 ppm) when an attack commenced, holding that state indefinitely leaves the water quality near safety margins during a prolonged outage. Our interlock implements a deterministic **fail-safe decay**: after **5 consecutive blocked cycles**, the controller actively decays the dosing setpoint down toward the nominal **100.0 ppm baseline** via exponential filtering.
+### 4.2 Deterministic Fail-Safe Decay vs. Indefinite Holding
+Holding the last accepted safe command protects against transient sensor dropouts. However, if a facility was operating at an elevated state (e.g., 140 ppm) when an attack commenced, holding that state indefinitely during an extended outage risks water quality degradation. AquaLock SIS implements a deterministic **fail-safe decay policy**: after **5 consecutive blocked cycles**, the controller actively decays the dosing setpoint down toward the nominal **100.0 ppm baseline** via exponential filtering, preserving water availability without risking chemical drift.
 
-### Q3: "Why is the hard bound placed on resulting ppm instead of raw pump dose?"
-> **Answer:** If the safety interlock only monitored pump stroke or motor RPM, an attacker who spoofed the raw water flow meter down to 15 L/s would cause a controller attempting mass balance to heavily overdose each litre of water. By evaluating the **projected resulting finished water concentration (`ppm = feed_mg_s / flow`)**, the interlock defends against both sensor spoofing and flow manipulation.
+### 4.3 Evaluating Physical Concentration over Raw Actuator Units
+Monitoring pump stroke or motor RPM alone is insufficient: an attacker who spoofs the raw water flow meter down to 15 L/s would cause a mass-balance controller to heavily overdose each litre of water. By evaluating the **projected finished water concentration ($\text{ppm} = \dot{m}_{\text{feed}} / Q_{\text{flow}}$)**, the interlock defends against both actuator tampering and flow sensor manipulation.
 
 ---
 
@@ -154,36 +154,25 @@ Open your browser to: **[http://localhost:8000/](http://localhost:8000/)**
 
 ---
 
-## 7. Running the Demo for Judges (3-Minute Script)
+## 7. Interactive Demonstration Scenarios
 
-Follow this sequence for an impactful live demonstration:
+The system provides four pre-configured adversarial scenarios to validate layered defense-in-depth:
 
-1. **Nominal State (30s):**
-   - Point out the dark control-room console, tabular live telemetry readouts, and the three charts.
-   - Show that Primary and Verification sensor lines overlap closely around 100 ppm, pH sits safely at ~7.60 (Green Band), and the status pill shows `NOMINAL OPERATION`.
-   - Point out the **SIS Key Switch** in the top center set to `ENGAGED`.
+### Scenario 1: Baseline Nominal Operation
+* **Behavior:** Primary and Verification sensor readings track within 15% noise limits (~100 ppm NaOH). Finished water pH stabilizes at **7.60** (Safe Green Band), and system status indicates `NOMINAL OPERATION`.
 
-2. **The Unprotected Attack (45s):**
-   - Click the **SIS Safety Interlock Switch** to toggle it **OFF** (`BYPASSED`).
-   - Click **1. Oldsmar Spike (11,100 ppm)** (or run `bash scripts/attack_oldsmar.sh`).
-   - Watch the requested and actual dose lines shoot together to ~11,100 ppm.
-   - Watch the finished water pH climb from 7.6 through the amber zone and into the dangerous red caustic band (>10.0, reaching 12.8+). The status pill flashes `CRITICAL DANGER`.
-   - Explain: *"Without an independent safety interlock, the SCADA controller trusts the tampered sensor and poisons the finished water."*
+### Scenario 2: Unprotected Control Loop (Interlock Bypassed)
+* **Trigger:** Toggle the **SIS Safety Interlock Switch** to `BYPASSED` and trigger **1. Oldsmar Spike (11,100 ppm)** (or run `bash scripts/attack_oldsmar.sh`).
+* **Consequence:** Without independent physical interlocks, the SCADA controller trusts the compromised sensor feedback and drives the pump to maximum output. Finished water pH climbs rapidly from 7.60 through the elevated threshold into the dangerous caustic band (**pH > 10.0, reaching 12.8+** within ~20 seconds), demonstrating the real-world consequence of the 2021 Oldsmar incident.
 
-3. **The Protected Defense & The "Ghost Line" (45s):**
-   - Click **↺ Reset System Simulation** and toggle the **SIS Safety Interlock Switch** back **ON** (`ENGAGED`).
-   - Click **1. Oldsmar Spike (11,100 ppm)** again.
-   - **Observe the Block Choreography:**
-     - The screen border flashes red.
-     - The status pill transitions to `DOSE BLOCKED: SENSOR_DISAGREEMENT`.
-     - In the Dose Chart, the **dashed red requested dose** rockets to 11,100 ppm, while the **solid blue actual dose** remains flat at 100 ppm.
-     - In the pH Chart, the water line remains completely flat and safe at 7.60.
-     - In the Event Log, a red badge slides in with the exact safety gate trip reason.
+### Scenario 3: Active Interlock & The "Ghost Line" (Interlock Engaged)
+* **Trigger:** Reset the plant (`bash scripts/reset.sh`), ensure the **SIS Safety Interlock** is `ENGAGED`, and trigger the **Oldsmar Spike**.
+* **Observation:** The interlock immediately trips on **Rate of Change** and **Sensor Disagreement**. In the Dose Chart, the **dashed red requested dose** ("Ghost Line") spikes toward 11,100 ppm, while the **solid blue actual dose** remains clamped at the 100 ppm baseline. Finished water pH stays flat and safe at 7.60.
 
-4. **Layered Defense-in-Depth (60s):**
-   - Click **2. Single-Channel Stealth (135 ppm)** &rarr; show it caught exclusively by channel cross-check.
-   - Click **3. Slow Ramp Dual (+35 ppm/s)** &rarr; show both channels ramping together, defeating cross-check and rate-of-change, but stopped cold by the 150 ppm hard ceiling.
-   - Click **4. Flow Falsification (15 L/s)** &rarr; show that manipulating flow to trick the controller is blocked because the interlock checks physical concentration.
+### Scenario 4: Layered Multi-Gate Coverage
+* **Single-Channel Stealth (135 ppm):** Bypasses single-channel limits, blocked exclusively by Gate 3 (**Analytic Redundancy Cross-Check**).
+* **Slow Ramp Dual Compromise (+35 ppm/s):** Both sensor channels are ramped together, evading cross-check and rate-of-change thresholds. Blocked deterministically by Gate 1 (**150 ppm Hard Bound Ceiling**).
+* **Flow Sensor Falsification (15 L/s):** The attacker manipulates water flow telemetry to trick the controller. Blocked because the interlock bounds **resulting chemical concentration ($\text{ppm}$)** rather than raw pump displacement.
 
 ---
 
