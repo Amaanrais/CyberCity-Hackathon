@@ -225,7 +225,7 @@ This project was built and presented collaboratively at the **CyberMACS "Defend 
 
 * **Amaan Rais** — Architecture, Physical Interlock Design & Core System Implementation ([GitHub](https://github.com/Amaanrais))
 * **Amar Kumar Mandal** — ICS Threat Modeling & Defense Validation ([GitHub](https://github.com/Amarmandal))
-* **Mahdi Mohammad Shibli** — Control Loops & Industrial Standards Analysis
+* **Mahdi Mohammad Shibli** — Control Loops & Industrial Standards Analysis. ([GitHub](https://github.com/mrbrownstone07))
 * **Quazi Fariha Tasnim** — Scenario Design & Operational Defender Persona
 * **S M Dedar Alam** — Web Console, Live Presentation & Demo Orchestration ([GitHub](https://github.com/devded))
 
