@@ -1,11 +1,7 @@
-.env
-.venv/
-venv/
 __pycache__/
 *.pyc
-.DS_Store
-node_modules/
-dist/
-build/
 .pytest_cache/
-.coverage
+.venv/
+data/audit.db*
+server.log
+*.png

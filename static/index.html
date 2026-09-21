@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AquaLock SIS — IEC 61511 Water Safety Interlock</title>
+  
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS Engine -->
+  <script src="/static/tailwind.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          },
+          boxShadow: {
+            'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Flowbite / ApexCharts & Lucide Bundles -->
+  <script src="/static/apexcharts.min.js"></script>
+  <script src="/static/lucide.min.js"></script>
+
+  <!-- Custom CSS extensions -->
+  <link rel="stylesheet" href="/static/styles.css?v=color_dash">
+</head>
+<body class="bg-[#ffffff] text-slate-900 dark:bg-zinc-950 dark:text-zinc-100 flex h-screen w-screen overflow-hidden antialiased font-sans select-none">
+
+  <div class="flex h-screen w-screen overflow-hidden">
+    
+    <!-- LEFT SIDEBAR -->
+    <aside id="sidebar" class="w-[17rem] min-w-[17rem] bg-white dark:bg-zinc-900 border-r border-slate-200 dark:border-zinc-800 flex flex-col justify-between p-3 z-20 shadow-xs select-none">
+      <div>
+        <!-- Brand Header -->
+        <div class="sidebar-header flex items-center justify-between pb-3 border-b border-slate-200 dark:border-zinc-800 gap-1">
+          <div class="sidebar-brand-group flex items-center gap-2 min-w-0">
+            <div class="w-7 h-7 rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-xs flex-shrink-0">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+            </div>
+            <div class="sidebar-label min-w-0">
+              <div class="flex items-center gap-1.5">
+                <div class="text-xs font-bold tracking-tight text-slate-900 dark:text-white leading-tight whitespace-nowrap">AQUALOCK</div>
+                <span class="text-[9px] font-semibold font-mono px-1 py-0.2 rounded border border-sky-200 text-sky-700 bg-sky-50 dark:border-sky-800 dark:text-sky-300 dark:bg-sky-950/40">SIS</span>
+              </div>
+              <div class="text-[10px] font-medium text-slate-500 dark:text-zinc-400 truncate">IEC 61511 Safety Interlock</div>
+            </div>
+          </div>
+
+          <!-- Action: Sidebar Collapse/Extend Toggle -->
+          <div class="sidebar-action-group flex items-center gap-1 flex-shrink-0">
+            <button id="btn-sidebar-toggle" class="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 transition shadow-xs flex-shrink-0" title="Minimize Sidebar" aria-label="Toggle Sidebar">
+              <i id="sidebar-toggle-icon" data-lucide="panel-left-close" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="mt-4 flex flex-col gap-1">
+          <div class="sidebar-label text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 px-2 py-1">
+            Operations & Defense
+          </div>
+          
+          <button class="nav-item active w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-left" data-tab="overview" title="Live Telemetry">
+            <i data-lucide="layout-dashboard" class="w-4 h-4 text-sky-600 dark:text-sky-400 flex-shrink-0"></i>
+            <span class="sidebar-label">Live Telemetry</span>
+          </button>
+
+          <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-left" data-tab="attack-studio" title="Attack Studio">
+            <i data-lucide="crosshair" class="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0"></i>
+            <span class="sidebar-label">Attack Studio</span>
+            <span class="sidebar-label ml-auto text-[9px] font-bold font-mono border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300 px-1.5 py-0.5 rounded">EXPLOITS</span>
+          </button>
+
+          <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-left" data-tab="safety-gates" title="Safety Interlock Gates">
+            <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0"></i>
+            <span class="sidebar-label">Safety Interlock Gates</span>
+          </button>
+
+          <button class="nav-item w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition text-left" data-tab="audit-trail" title="SQLite Audit Trail">
+            <i data-lucide="database" class="w-4 h-4 text-indigo-600 dark:text-indigo-400 flex-shrink-0"></i>
+            <span class="sidebar-label">SQLite Audit Trail</span>
+          </button>
+        </nav>
+
+        <!-- HARDWARE INTERLOCK PHYSICAL KEY CONTROL -->
+        <div class="flex flex-col gap-1.5 pt-2.5 border-t border-slate-200 dark:border-zinc-800 mt-3">
+          <div class="sidebar-label text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-zinc-500 px-2">
+            Safety Control
+          </div>
+          <div class="sidebar-interlock-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 shadow-xs flex flex-col gap-2" title="IEC 61511 Physical Key Switch Stand-In">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-white">
+                <i data-lucide="key-round" class="w-3.5 h-3.5 text-amber-500 flex-shrink-0"></i>
+                <span class="sidebar-label text-[11px] tracking-tight">HARDWARE INTERLOCK</span>
+              </div>
+              <span id="interlock-badge" class="sidebar-label ml-1 text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">ENGAGED</span>
+            </div>
+            <div class="sidebar-interlock-row flex items-center justify-between pt-1.5 border-t border-slate-100 dark:border-zinc-800">
+              <span class="sidebar-label text-[9px] text-slate-400 dark:text-zinc-500 font-mono">IEC 61511 Key Switch</span>
+              <label class="flowbite-toggle" title="Toggle SIS Safety Interlock">
+                <input type="checkbox" id="interlock-toggle" checked aria-label="Toggle SIS Safety Interlock">
+                <span class="toggle-track">
+                  <span class="toggle-thumb"></span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer (Plant Diagnostics & System Controls) -->
+      <div class="border-t border-slate-200 dark:border-zinc-800 pt-3 px-1 flex flex-col gap-2 mt-auto sidebar-footer">
+        <div class="sidebar-telemetry-box bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg p-2.5 flex flex-col gap-2 shadow-xs">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-800 dark:text-zinc-200 flex items-center gap-1.5 text-[11px] font-medium">
+              <span class="relative flex h-2 w-2 flex-shrink-0">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+              </span>
+              <span class="sidebar-label">Plant System</span>
+            </span>
+            <span id="sidebar-status-text" class="sidebar-label text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40">OPTIMAL</span>
+          </div>
+
+          <!-- Run & Uptime Telemetry -->
+          <div class="sidebar-label grid grid-cols-2 gap-1.5 py-1.5 border-y border-slate-100 dark:border-zinc-800 text-[10px] font-mono">
+            <div>
+              <span class="text-slate-400 dark:text-zinc-500">RUN: </span>
+              <span id="run-id-text" class="font-bold text-sky-600 dark:text-sky-400">INIT</span>
+            </div>
+            <div class="text-right">
+              <span class="text-slate-400 dark:text-zinc-500">UP: </span>
+              <span id="uptime-text" class="font-bold text-slate-800 dark:text-zinc-200">0.0s</span>
+            </div>
+          </div>
+
+          <div class="sidebar-label text-[10px] text-slate-500 dark:text-zinc-400 flex items-center justify-between">
+            <span>Target:</span>
+            <span class="text-slate-900 dark:text-zinc-100 font-semibold font-mono">NaOH (Caustic)</span>
+          </div>
+          <div class="sidebar-label text-[9px] text-slate-400 dark:text-zinc-500 font-mono">
+            SIL-3 Loop • 1.0 Hz Physical Tick
+          </div>
+        </div>
+
+        <!-- Footer Action Buttons: Reset Simulation & Theme Toggle -->
+        <div class="sidebar-footer-actions flex items-center gap-1.5">
+          <button id="btn-reset-top" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition shadow-xs" title="Reset Plant Simulation" aria-label="Reset Plant Simulation">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 flex-shrink-0"></i>
+            <span class="sidebar-label">Reset Simulation</span>
+          </button>
+          <button id="btn-theme-toggle" class="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition shadow-xs flex-shrink-0" title="Toggle Light/Dark Theme" aria-label="Toggle Light/Dark Theme">
+            <i id="theme-icon" data-lucide="moon" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN WORKSPACE -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden bg-white dark:bg-zinc-950">
+
+
+      <!-- ===================================================================
+           VIEW 1: OVERVIEW & FLOWBITE APEXCHARTS TELEMETRY
+           =================================================================== -->
+      <div id="view-overview" class="view-page flex-1 p-3 sm:p-3.5 pb-5 sm:pb-6 overflow-y-auto flex flex-col gap-2.5 sm:gap-3 min-h-0">
+        
+        <!-- 5 KPI STAT CARDS ROW -->
+        <div class="grid grid-cols-5 gap-2.5 sm:gap-3 flex-shrink-0">
+          
+          <!-- Stat 1: pH -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs hover:border-sky-500/40 transition">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Finished Water pH</span>
+              <div class="w-5 h-5 rounded-md bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <i data-lucide="flask-conical" class="w-3 h-3"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="stat-ph" class="stat-value text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">7.60</span>
+              <span class="text-xs font-semibold font-mono text-slate-400">pH</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-zinc-800">
+              <span id="ph-band-badge" class="text-[9px] font-mono font-semibold px-2 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40">SAFE BAND</span>
+              <span id="stat-ph-delta" class="mono text-[10px] text-slate-400">--</span>
+            </div>
+          </div>
+
+          <!-- Stat 2: Feed Rate -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs hover:border-sky-500/40 transition">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">NaOH Mass Feed</span>
+              <div class="w-5 h-5 rounded-md bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                <i data-lucide="zap" class="w-3 h-3"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="stat-feed" class="stat-value text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">5000</span>
+              <span class="text-xs font-semibold font-mono text-slate-400">mg/s</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-zinc-800">
+              <span class="text-[10px] font-mono text-slate-500 dark:text-zinc-400">ṁ = Dose × Flow</span>
+              <span id="stat-feed-delta" class="mono text-[10px] text-slate-400">--</span>
+            </div>
+          </div>
+
+          <!-- Stat 3: Resulting PPM -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs hover:border-sky-500/40 transition">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Resulting Finished</span>
+              <div class="w-5 h-5 rounded-md bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <i data-lucide="layers" class="w-3 h-3"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="stat-resulting" class="stat-value text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">100.0</span>
+              <span class="text-xs font-semibold font-mono text-slate-400">ppm</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-zinc-800">
+              <span class="text-[10px] font-mono text-slate-500 dark:text-zinc-400">Ceiling: 150.0 ppm</span>
+              <span id="stat-resulting-delta" class="mono text-[10px] text-slate-400">--</span>
+            </div>
+          </div>
+
+          <!-- Stat 4: Water Flow -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs hover:border-sky-500/40 transition">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Water Flow Intake</span>
+              <div class="w-5 h-5 rounded-md bg-cyan-50 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400 flex items-center justify-center">
+                <i data-lucide="waves" class="w-3 h-3"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="stat-flow" class="stat-value text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">50.0</span>
+              <span class="text-xs font-semibold font-mono text-slate-400">L/s</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-zinc-800">
+              <span class="text-[10px] font-mono text-slate-500 dark:text-zinc-400">Nominal ~50 L/s</span>
+              <span id="stat-flow-delta" class="mono text-[10px] text-slate-400">--</span>
+            </div>
+          </div>
+
+          <!-- Stat 5: Active Dose -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-2.5 sm:p-3 shadow-xs hover:border-sky-500/40 transition">
+            <div class="flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span class="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">Actuator Pump Dose</span>
+              <div class="w-5 h-5 rounded-md bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                <i data-lucide="gauge" class="w-3 h-3"></i>
+              </div>
+            </div>
+            <div class="flex items-baseline gap-1 my-1">
+              <span id="stat-dose" class="stat-value text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">100.0</span>
+              <span class="text-xs font-semibold font-mono text-slate-400">ppm</span>
+            </div>
+            <div class="flex items-center justify-between text-[10px] pt-1 border-t border-slate-100 dark:border-zinc-800">
+              <span id="ghost-divergence-badge" class="text-[9px] font-mono font-semibold px-2 py-0.2 rounded-full border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">ALIGNED</span>
+              <span id="stat-dose-delta" class="mono text-[10px] text-slate-400">--</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- UPPER FLOWBITE APEXCHART: FINISHED WATER pH -->
+        <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 sm:p-4 shadow-xs flex flex-col flex-1 min-h-[240px]">
+          <div class="flex items-center justify-between mb-2 sm:mb-2.5">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full bg-sky-500"></div>
+              <h3 class="text-xs font-bold text-slate-900 dark:text-white">Finished Water Acidity / Alkalinity (pH & Chemical Neutralization Curve)</h3>
+            </div>
+            <div class="flex items-center gap-2 text-[11px] font-semibold">
+              <span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 font-mono text-[10px]">■ Safe: 6.5–8.5</span>
+              <span class="px-2 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 font-mono text-[10px]">■ Elevated: 8.5–10.0</span>
+              <span class="px-2 py-0.5 rounded bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300 border border-red-200 dark:border-red-800/60 font-mono text-[10px]">■ Hazardous: &gt;10.0</span>
+            </div>
+          </div>
+          <!-- ApexCharts Container -->
+          <div class="chart-canvas-wrapper flex-1 min-h-0 relative w-full overflow-hidden">
+            <div id="ph-chart-container" class="w-full h-full"></div>
+          </div>
+        </div>
+
+        <!-- LOWER 3-COLUMN SPLIT: SENSORS + GHOST LINE + EVENT LOG -->
+        <div class="grid grid-cols-3 gap-2.5 sm:gap-3 flex-1 min-h-[220px]">
+          
+          <!-- Flowbite Chart 2: Dual Sensor Channels -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex flex-col min-h-0">
+            <div class="flex items-center justify-between mb-1.5 sm:mb-2 gap-2">
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <i data-lucide="radio" class="w-3.5 h-3.5 text-rose-500"></i>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">Dual Sensors</h4>
+              </div>
+              <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex items-center gap-1.5 text-[10px] font-mono font-semibold whitespace-nowrap">
+                  <span class="text-rose-500">── Prim</span>
+                  <span class="text-emerald-500">- - Verif</span>
+                </div>
+                <span id="divergence-badge" class="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 whitespace-nowrap">DIV: 0.0%</span>
+              </div>
+            </div>
+            <div class="chart-canvas-wrapper flex-1 min-h-0 relative w-full overflow-hidden">
+              <div id="sensor-chart-container" class="w-full h-full"></div>
+            </div>
+          </div>
+
+          <!-- Flowbite Chart 3: Actuator Dose (The Ghost Line) -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex flex-col min-h-0">
+            <div class="flex items-center justify-between mb-1.5 sm:mb-2 gap-2">
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <i data-lucide="git-commit" class="w-3.5 h-3.5 text-sky-500"></i>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white whitespace-nowrap">Pump Actuator</h4>
+              </div>
+              <div class="flex items-center gap-2 text-[10px] font-mono font-semibold whitespace-nowrap flex-shrink-0">
+                <span class="text-orange-500">- - Req</span>
+                <span class="text-sky-500">── Act</span>
+              </div>
+            </div>
+            <div class="chart-canvas-wrapper flex-1 min-h-0 relative w-full overflow-hidden">
+              <div id="dose-chart-container" class="w-full h-full"></div>
+            </div>
+          </div>
+
+          <!-- Live Event Log -->
+          <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex flex-col min-h-0">
+            <div class="flex items-center justify-between mb-2 sm:mb-2.5">
+              <div class="flex items-center gap-1.5">
+                <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-500"></i>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white">Live Event Stream</h4>
+              </div>
+              <span id="event-count-badge" class="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">0 EVENTS</span>
+            </div>
+            <div id="event-log" class="flex-1 overflow-y-auto flex flex-col gap-1.5 pr-1 text-xs">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- ===================================================================
+           VIEW 2: CYBERATTACK SIMULATION STUDIO & SCADA TOPOLOGY
+           =================================================================== -->
+      <div id="view-attack-studio" class="view-page hidden flex-1 p-3.5 overflow-y-auto">
+        <div class="grid grid-cols-12 gap-3.5 h-full">
+          
+          <!-- LEFT COLUMN: 4 EXPLOIT SCENARIOS & PLAYGROUND (7 COLS) -->
+          <div class="col-span-7 flex flex-col gap-3 overflow-y-auto pr-1">
+            
+            <!-- SCENARIO 1: OLDSMAR SPIKE -->
+            <div class="attack-scenario-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs hover:border-red-500/40 transition" id="card-exploit-oldsmar">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                  <i data-lucide="skull" class="w-4 h-4 text-red-500"></i>
+                  <span>1. Oldsmar Remote SCADA Spike</span>
+                </div>
+                <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300">CRITICAL THREAT</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 mb-2 leading-relaxed">
+                Adversary compromises primary sensor telemetry and commands lethal 11,100 ppm caustic dosage, exactly replicating the February 2021 Oldsmar, Florida attack.
+              </p>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/60 p-2 rounded-lg mb-2 border border-slate-100 dark:border-zinc-800">
+                <span>Vector: <b class="text-slate-800 dark:text-zinc-200">Sensor Spoofing</b></span>
+                <span>•</span>
+                <span>Payload: <b class="text-slate-800 dark:text-zinc-200">100 → 11,100 ppm</b></span>
+                <span>•</span>
+                <span>Expected Trip: <b class="text-slate-800 dark:text-zinc-200">Gate 1 + Gate 3</b></span>
+              </div>
+              <button class="launch-exploit-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition shadow-xs active:scale-[0.98]" data-variant="oldsmar_spike">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Launch Oldsmar Spike</span>
+              </button>
+            </div>
+
+            <!-- SCENARIO 2: SINGLE-CHANNEL STEALTH -->
+            <div class="attack-scenario-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs hover:border-amber-500/40 transition" id="card-exploit-stealth">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                  <i data-lucide="target" class="w-4 h-4 text-amber-500"></i>
+                  <span>2. Single-Channel Stealth Spoof</span>
+                </div>
+                <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">STEALTH DRIFT</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 mb-2 leading-relaxed">
+                Adversary moderately raises primary channel to 135 ppm, staying strictly within slew rate (40 ppm/s) and hard ceiling (150 ppm). Proves why the independent second channel is indispensable.
+              </p>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/60 p-2 rounded-lg mb-2 border border-slate-100 dark:border-zinc-800">
+                <span>Vector: <b class="text-slate-800 dark:text-zinc-200">Sub-Threshold</b></span>
+                <span>•</span>
+                <span>Payload: <b class="text-slate-800 dark:text-zinc-200">135.0 ppm</b></span>
+                <span>•</span>
+                <span>Expected Trip: <b class="text-slate-800 dark:text-zinc-200">Gate 3 (Disagreement)</b></span>
+              </div>
+              <button class="launch-exploit-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition shadow-xs active:scale-[0.98]" data-variant="single_channel_stealth">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Launch Stealth Drift</span>
+              </button>
+            </div>
+
+            <!-- SCENARIO 3: SLOW RAMP DUAL COMPROMISE -->
+            <div class="attack-scenario-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs hover:border-purple-500/40 transition" id="card-exploit-ramp">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                  <i data-lucide="trending-up" class="w-4 h-4 text-purple-500"></i>
+                  <span>3. Slow Ramp Dual-Compromise (APT)</span>
+                </div>
+                <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300">ADVANCED APT</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 mb-2 leading-relaxed">
+                Sophisticated adversary compromises BOTH Primary and Verification sensors simultaneously, creeping them up at +35 ppm/s. Bypasses cross-check and slew rate; caught solely by physical hard ceiling.
+              </p>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/60 p-2 rounded-lg mb-2 border border-slate-100 dark:border-zinc-800">
+                <span>Vector: <b class="text-slate-800 dark:text-zinc-200">Dual-Channel Sync</b></span>
+                <span>•</span>
+                <span>Payload: <b class="text-slate-800 dark:text-zinc-200">+35 ppm/s continuous</b></span>
+                <span>•</span>
+                <span>Expected Trip: <b class="text-slate-800 dark:text-zinc-200">Gate 1 Ceiling</b></span>
+              </div>
+              <button class="launch-exploit-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition shadow-xs active:scale-[0.98]" data-variant="slow_ramp">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Launch Dual Ramp</span>
+              </button>
+            </div>
+
+            <!-- SCENARIO 4: FLOW FALSIFICATION -->
+            <div class="attack-scenario-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs hover:border-cyan-500/40 transition" id="card-exploit-flow">
+              <div class="flex items-center justify-between mb-1.5">
+                <div class="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
+                  <i data-lucide="droplet" class="w-4 h-4 text-cyan-500"></i>
+                  <span>4. Flow Sensor Falsification</span>
+                </div>
+                <span class="text-[9px] font-mono font-bold px-2 py-0.5 rounded-full bg-cyan-100 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300">HYDRAULIC SPOOF</span>
+              </div>
+              <p class="text-xs text-slate-600 dark:text-zinc-400 mb-2 leading-relaxed">
+                Adversary leaves chemical sensors untouched and reports intake flow down to 15 L/s, forcing the controller into massive mass overdosing per litre. Caught because the interlock checks physical resulting ppm.
+              </p>
+              <div class="flex items-center gap-3 text-[11px] text-slate-500 dark:text-zinc-400 bg-slate-50 dark:bg-zinc-800/60 p-2 rounded-lg mb-2 border border-slate-100 dark:border-zinc-800">
+                <span>Vector: <b class="text-slate-800 dark:text-zinc-200">Flow Telemetry Spoof</b></span>
+                <span>•</span>
+                <span>Payload: <b class="text-slate-800 dark:text-zinc-200">Reported 15 L/s (vs 50 L/s)</b></span>
+                <span>•</span>
+                <span>Expected Trip: <b class="text-slate-800 dark:text-zinc-200">Gate 1 Resulting PPM</b></span>
+              </div>
+              <button class="launch-exploit-btn inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition shadow-xs active:scale-[0.98]" data-variant="flow_falsification">
+                <i data-lucide="play" class="w-3.5 h-3.5"></i>
+                <span>Launch Flow Spoof</span>
+              </button>
+            </div>
+
+            <!-- CUSTOM EXPLOIT PLAYGROUND -->
+            <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs">
+              <div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white mb-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-sky-600"></i>
+                <span>Judge Exploit Playground (Custom Live Parameter Injection)</span>
+              </div>
+              
+              <!-- Slider 1: Primary PPM -->
+              <div class="mb-3">
+                <div class="flex justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  <span>Primary NaOH Sensor Injection</span>
+                  <span id="slider-primary-val" class="mono font-bold text-sky-600">100.0 ppm</span>
+                </div>
+                <input type="range" id="custom-primary-range" class="styled-range" min="0" max="12000" step="10" value="100" aria-label="Primary NaOH Sensor Injection Range">
+                <div class="flex gap-1.5 mt-2 flex-wrap">
+                  <button class="quick-preset text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition" data-val="100">100 ppm (Nominal)</button>
+                  <button class="quick-preset text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition" data-val="135">135 ppm (Stealth)</button>
+                  <button class="quick-preset text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition" data-val="300">300 ppm (Elevated)</button>
+                  <button class="quick-preset text-[11px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 transition" data-val="11100">11,100 ppm (Oldsmar)</button>
+                </div>
+              </div>
+
+              <!-- Slider 2: Flow L/s -->
+              <div class="mb-3">
+                <div class="flex justify-between text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  <span>Reported Water Flow Rate Injection</span>
+                  <span id="slider-flow-val" class="mono font-bold text-cyan-600">50.0 L/s</span>
+                </div>
+                <input type="range" id="custom-flow-range" class="styled-range" min="5" max="80" step="1" value="50" aria-label="Reported Water Flow Rate Range">
+              </div>
+
+              <div class="flex gap-2 mt-3">
+                <button id="btn-fire-custom" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white transition shadow-xs active:scale-[0.98]">
+                  <i data-lucide="flame" class="w-3.5 h-3.5"></i>
+                  <span>Execute Custom Injection</span>
+                </button>
+                <button id="btn-stop-all" class="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-200 transition">
+                  <i data-lucide="square" class="w-3.5 h-3.5"></i>
+                  <span>Stop / Restore Nominal</span>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT COLUMN: ANIMATED SCADA TOPOLOGY & STEPPER (5 COLS) -->
+          <div class="col-span-5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-xs flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2 text-xs font-bold text-slate-900 dark:text-white">
+                  <i data-lucide="cpu" class="w-4 h-4 text-sky-600"></i>
+                  <span>Cyber-Physical Process Topology & Defense Shield</span>
+                </div>
+                <span id="pipeline-status-badge" class="text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">SHIELD ACTIVE</span>
+              </div>
+
+              <!-- SVG Animated Schematic -->
+              <svg class="scada-pipeline-svg rounded-lg bg-slate-50 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 p-2 my-2" viewBox="0 0 520 280">
+                <defs>
+                  <linearGradient id="pipeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#0284c7" stop-opacity="0.25"/>
+                    <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.6"/>
+                  </linearGradient>
+                  <filter id="glowGreen" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="4" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                  <filter id="glowRed" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="6" result="blur"/>
+                    <feMerge>
+                      <feMergeNode in="blur"/>
+                      <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                  </filter>
+                </defs>
+
+                <!-- Water Pipe Background -->
+                <path d="M 20 180 L 140 180 L 260 180 L 380 180 L 500 180" stroke="url(#pipeGrad)" stroke-width="18" fill="none" stroke-linecap="round"/>
+
+                <!-- Flow particles -->
+                <circle cx="60" cy="180" r="3" fill="#0284c7"><animate attributeName="cx" values="20;500" dur="3s" repeatCount="indefinite"/></circle>
+                <circle cx="180" cy="180" r="3" fill="#0284c7"><animate attributeName="cx" values="20;500" dur="3s" begin="1s" repeatCount="indefinite"/></circle>
+                <circle cx="300" cy="180" r="3" fill="#0284c7"><animate attributeName="cx" values="20;500" dur="3s" begin="2s" repeatCount="indefinite"/></circle>
+
+                <!-- Raw Intake Node -->
+                <rect x="20" y="145" width="70" height="70" rx="8" stroke-width="1.5"/>
+                <text x="55" y="175" font-size="10" font-family="Inter" font-weight="700" text-anchor="middle">INTAKE</text>
+                <text x="55" y="195" fill="#64748b" font-size="9" font-family="JetBrains Mono" text-anchor="middle">~50 L/s</text>
+
+                <!-- Sensor Chamber Node -->
+                <rect id="svg-node-sensor" x="130" y="140" width="85" height="80" rx="8" stroke="#0284c7" stroke-width="1.5"/>
+                <text x="172" y="165" font-size="9" font-family="Inter" font-weight="700" text-anchor="middle">SENSORS</text>
+                <text id="svg-text-primary" x="172" y="185" fill="#ef4444" font-size="8.5" font-family="JetBrains Mono" font-weight="700" text-anchor="middle">P: 100 ppm</text>
+                <text id="svg-text-verif" x="172" y="202" fill="#10b981" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">V: 100 ppm</text>
+
+                <!-- Attacker Ingress Beam -->
+                <path id="svg-attack-beam" d="M 172 30 L 172 135" stroke="#ef4444" stroke-width="3" stroke-dasharray="4 3" fill="none" opacity="0"/>
+                <text id="svg-attack-label" x="172" y="22" fill="#ef4444" font-size="9" font-family="Inter" font-weight="700" text-anchor="middle" opacity="0">ATTACKER INJECTION</text>
+
+                <!-- Signal line to SCADA -->
+                <path d="M 172 140 L 172 80 L 280 80" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="3 3" fill="none"/>
+
+                <!-- SCADA Controller Node -->
+                <rect x="280" y="55" width="85" height="50" rx="8" stroke-width="1.5"/>
+                <text x="322" y="75" font-size="9" font-family="Inter" font-weight="700" text-anchor="middle">SCADA PLC</text>
+                <text id="svg-req-dose" x="322" y="93" fill="#0284c7" font-size="8.5" font-family="JetBrains Mono" text-anchor="middle">Req: 100 ppm</text>
+
+                <!-- Line from SCADA to SIS Interlock -->
+                <path id="svg-command-line" d="M 322 105 L 322 140" stroke="#0284c7" stroke-width="2" fill="none"/>
+
+                <!-- SIS DEFENSE SHIELD -->
+                <g id="svg-sis-shield" filter="url(#glowGreen)">
+                  <circle cx="322" cy="180" r="26" fill="#ffffff" stroke="#10b981" stroke-width="3"/>
+                  <path d="M 322 165 L 334 171 L 334 182 C 334 191 322 196 322 196 C 322 196 310 191 310 182 L 310 171 Z" fill="#10b981" opacity="0.85"/>
+                </g>
+                <text id="svg-shield-text" x="322" y="222" fill="#10b981" font-size="8.5" font-family="Inter" font-weight="700" text-anchor="middle">SIS INTERLOCK</text>
+
+                <!-- Line to Dosing Pump -->
+                <path id="svg-pump-feed-line" d="M 348 180 L 400 180" stroke="#0284c7" stroke-width="2.5" fill="none"/>
+
+                <!-- Chemical Metering Pump Node -->
+                <rect id="svg-node-pump" x="400" y="145" width="85" height="70" rx="8" stroke="#0284c7" stroke-width="1.5"/>
+                <text x="442" y="170" font-size="9" font-family="Inter" font-weight="700" text-anchor="middle">NaOH PUMP</text>
+                <text id="svg-act-dose" x="442" y="190" fill="#0284c7" font-size="8.5" font-family="JetBrains Mono" font-weight="700" text-anchor="middle">Act: 100 ppm</text>
+
+                <!-- Finished Tank Node -->
+                <rect id="svg-node-tank" x="430" y="30" width="75" height="65" rx="8" stroke="#0284c7" stroke-width="1.5"/>
+                <text x="467" y="52" font-size="8.5" font-family="Inter" font-weight="700" text-anchor="middle">STORAGE</text>
+                <text id="svg-tank-ph" x="467" y="72" fill="#059669" font-size="12" font-family="JetBrains Mono" font-weight="800" text-anchor="middle">7.6 pH</text>
+                <path d="M 442 145 L 442 95" stroke="#94a3b8" stroke-width="2" stroke-dasharray="2 2" fill="none"/>
+              </svg>
+            </div>
+
+            <!-- Exploit Stage Stepper -->
+            <div class="flex flex-col gap-1.5 mt-2">
+              <div class="step-item flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300" id="step-phase-1">
+                <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 flex items-center justify-center font-bold font-mono text-[10px]">1</div>
+                <span>Phase 1: Sensor Payload Injection via API</span>
+              </div>
+              <div class="step-item flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300" id="step-phase-2">
+                <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 flex items-center justify-center font-bold font-mono text-[10px]">2</div>
+                <span>Phase 2: SCADA Target Dose Computation</span>
+              </div>
+              <div class="step-item flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300" id="step-phase-3">
+                <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 flex items-center justify-center font-bold font-mono text-[10px]">3</div>
+                <span>Phase 3: IEC 61511 Multi-Gate Interlock Evaluation</span>
+              </div>
+              <div class="step-item flex items-center gap-2 p-2 rounded-lg bg-slate-50 dark:bg-zinc-800/50 border border-slate-200 dark:border-zinc-800 text-xs text-slate-700 dark:text-zinc-300" id="step-phase-4">
+                <div class="w-5 h-5 rounded-full bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 flex items-center justify-center font-bold font-mono text-[10px]">4</div>
+                <span>Phase 4: Physical Actuator Execution (Safe vs Poisoned)</span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ===================================================================
+           VIEW 3: IEC 61511 SAFETY INTERLOCK GATES
+           =================================================================== -->
+      <div id="view-safety-gates" class="view-page hidden flex-1 p-3.5 overflow-y-auto">
+        <div class="grid grid-cols-3 gap-3.5">
+          
+          <!-- GATE 1 -->
+          <div class="gate-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-slate-900 dark:text-white">Gate 1: Physical Hard Bound</span>
+              <span id="gate1-status" class="gate-badge badge-success text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border">MONITORING</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Enforces a strict absolute ceiling on the <b>projected resulting concentration in the finished water</b> (<span class="mono font-bold text-rose-600">resulting_ppm ≤ 150.0 ppm</span>).
+            </p>
+            <div class="bg-slate-50 dark:bg-zinc-800/60 p-3 rounded-lg text-xs text-slate-700 dark:text-zinc-300 border border-slate-100 dark:border-zinc-800">
+              <b>Physical Principle:</b> Evaluates physical finished concentration rather than raw pump stroke. Completely survives both sensor falsification and hydraulic flow spoofing attacks.
+            </div>
+            <div class="flex gap-1.5 mt-auto flex-wrap text-[10px] font-mono">
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">EPA SDWA §141.62</span>
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">IEC 61511 SIL 3</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">RULE_MAX_RESULTING_PPM</span>
+            </div>
+          </div>
+
+          <!-- GATE 2 -->
+          <div class="gate-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-slate-900 dark:text-white">Gate 2: Rate of Change Limit</span>
+              <span id="gate2-status" class="gate-badge badge-success text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border">MONITORING</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Limits dosing command slew rate acceleration to <span class="mono font-bold text-amber-600">|Δ Dose| ≤ 40.0 ppm/s</span> from the last accepted safe setpoint.
+            </p>
+            <div class="bg-slate-50 dark:bg-zinc-800/60 p-3 rounded-lg text-xs text-slate-700 dark:text-zinc-300 border border-slate-100 dark:border-zinc-800">
+              <b>Physical Principle:</b> Instantaneous step changes indicate electronic sensor tampering or hardware faults, preventing shock overdosing.
+            </div>
+            <div class="flex gap-1.5 mt-auto flex-wrap text-[10px] font-mono">
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">ISA/IEC 62443 SR 3.5</span>
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">NIST SP 800-82 §9.4</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">RULE_MAX_SLEW_RATE</span>
+            </div>
+          </div>
+
+          <!-- GATE 3 -->
+          <div class="gate-card bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 shadow-xs flex flex-col gap-3">
+            <div class="flex justify-between items-center">
+              <span class="text-sm font-bold text-slate-900 dark:text-white">Gate 3: Analytic Redundancy Cross-Check</span>
+              <span id="gate3-status" class="gate-badge badge-success text-[9px] font-mono font-semibold px-2 py-0.5 rounded-full border">MONITORING</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+              Cross-checks Primary vs independent Verification channel within a <span class="mono font-bold text-sky-600">15% relative tolerance</span> with a <span class="mono font-bold">2-sample debounce</span>.
+            </p>
+            <div class="bg-slate-50 dark:bg-zinc-800/60 p-3 rounded-lg text-xs text-slate-700 dark:text-zinc-300 border border-slate-100 dark:border-zinc-800">
+              <b>Physical Principle:</b> The Verification channel never drives the pump. Catching channel divergence unmasks stealthy sub-threshold sensor spoofing.
+            </div>
+            <div class="flex gap-1.5 mt-auto flex-wrap text-[10px] font-mono">
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">ISA/IEC 62443 SR 1.5</span>
+              <span class="px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 text-slate-500">IEC 61508 HFT 1</span>
+              <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300">RULE_CROSS_CHECK</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- FAIL-SAFE DECAY POLICY CALLOUT -->
+        <div class="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-4 mt-3.5 shadow-xs">
+          <div class="flex items-center gap-2 mb-2 text-xs font-bold text-slate-900 dark:text-white">
+            <i data-lucide="info" class="w-4 h-4 text-sky-600"></i>
+            <span>Deterministic Fail-Safe Decay Policy (Judge Q&A Rationale)</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-zinc-400 leading-relaxed">
+            Holding the last accepted dose is safe during transient telemetry flickers. However, if the plant was already operating at an elevated dosing state when an attack began, holding that value indefinitely maintains hazardous water near the safety threshold. Our interlock policy deterministically initiates an <b>exponential decay toward the 100.0 ppm baseline after 5 consecutive blocked cycles</b>, safely de-escalating the plant without causing sudden water treatment disruptions.
+          </p>
+        </div>
+      </div>
+
+      <!-- ===================================================================
+           VIEW 4: SQLITE AUDIT TRAIL DATA TABLE
+           =================================================================== -->
+      <div id="view-audit-trail" class="view-page hidden flex-1 p-3.5 overflow-y-auto flex flex-col">
+        <!-- Toolbar -->
+        <div class="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-500 dark:text-zinc-400">Filter:</span>
+            <div class="inline-flex rounded-lg shadow-xs">
+              <button class="audit-filter-btn active text-xs px-2.5 py-1 font-medium bg-sky-600 text-white rounded-l-lg hover:bg-sky-700 transition" data-filter="ALL">ALL</button>
+              <button class="audit-filter-btn text-xs px-2.5 py-1 font-medium bg-white dark:bg-zinc-800 border-t border-b border-r border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 transition" data-filter="BLOCKED">BLOCKED</button>
+              <button class="audit-filter-btn text-xs px-2.5 py-1 font-medium bg-white dark:bg-zinc-800 border-t border-b border-r border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 rounded-r-lg hover:bg-slate-50 transition" data-filter="ALLOWED">ALLOWED</button>
+            </div>
+            <span id="audit-records-count" class="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300">0 RECORDS</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border border-slate-200 dark:border-zinc-700 text-slate-500">ACID SQLite3 Storage</span>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="relative flex items-center">
+              <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 pointer-events-none"></i>
+              <input type="text" id="audit-search-input" placeholder="Search decisions, runs, gates..." class="pl-8 pr-3 py-1 text-xs rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-white w-64 focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-xs" aria-label="Search audit trail records">
+            </div>
+            <button id="btn-refresh-audit" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 shadow-xs transition" aria-label="Refresh audit records">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Flowbite Styled Table Container -->
+        <div class="flex-1 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl shadow-xs overflow-y-auto">
+          <table class="w-full text-left text-xs text-slate-600 dark:text-zinc-300">
+            <thead class="text-[10px] font-mono uppercase tracking-wider bg-slate-50 dark:bg-zinc-800/80 text-slate-500 dark:text-zinc-400 sticky top-0 z-10 border-b border-slate-200 dark:border-zinc-700">
+              <tr>
+                <th class="px-3 py-2.5 font-mono">Time (ISO)</th>
+                <th class="px-3 py-2.5 font-mono">Run ID</th>
+                <th class="px-3 py-2.5">Decision</th>
+                <th class="px-3 py-2.5 font-mono">Req Dose</th>
+                <th class="px-3 py-2.5 font-mono">Act Dose</th>
+                <th class="px-3 py-2.5 font-mono">Resulting</th>
+                <th class="px-3 py-2.5 font-mono">Water pH</th>
+                <th class="px-3 py-2.5 font-mono">Primary</th>
+                <th class="px-3 py-2.5 font-mono">Verif</th>
+                <th class="px-3 py-2.5 font-mono">Flow</th>
+                <th class="px-3 py-2.5">Reason / Trip Gate</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-slate-100 dark:divide-zinc-800">
+              <tr><td colspan="11" class="text-center py-8 text-slate-400">Loading audit records from SQLite sink...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- Application Logic -->
+  <script src="/static/app.js?v=color_v2"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    });
+  </script>
+</body>
+</html>
